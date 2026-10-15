@@ -1,52 +1,62 @@
-# multi-agent-platform-proto
+# 多智能体协作平台原型
 
-For your final project, your team will design and implement a Multi-Agent Collaborative Platform. This system will bridge the gap between human instruction and autonomous AI execution. You are required to build a framework where multiple heterogeneous agents can communicate, dynamically divide complex tasks, interact with humans, execute code, and evolve their capabilities over time based on past experiences.
+这是课程期末项目的可运行原型。系统把一个人类目标和一组分工不同的智能体连在一起：人类在群聊里下达任务，智能体自行拆分、互相委派、在各自的沙箱里执行，并在拿不准或要做危险操作时停下来问人。
 
-The team members will be finalized by the end of next week.
+课程的 API 密钥和封闭测试集还没有发放。当前默认使用一个本地 mock 模型，它走的工具协议和之后的 DeepSeek / HKGAI 客户端相同。密钥到位后，只需要改 `.env`，编排、沙箱和记忆不用重写。
 
-Core System Boundaries & Design Constraints
-To ensure a level playing field and focus purely on backend AI engineering, your system must strictly adhere to the following architectural boundaries:
+## 现在能做什么
 
-2.1. Communication & Collaboration Topologies
+- 人类和单个智能体私聊，也可以和协调者、研究员、程序员、审阅者一起群聊。
+- 协调者把高层目标拆成子任务。研究员在需要写代码时，会把实现委派给程序员。
+- 每个智能体只使用自己的目录。协作产物只能以 `.md` 或 `.txt` 复制到 `workspaces/handoff/`。
+- 遇到含糊目标，或在删除文件、推送到 GitHub 之前，执行会暂停并等待人类回答。
+- 每个智能体把本次成败写成自己的 JSON 笔记，下次相似任务会先读这些笔记。
+- 工具包括网页搜索、文件读写、运行 Python，以及在沙箱内提交和推送代码。
+- `eval` 会统计子任务完成率、总耗时，以及产物是否满足检查条件。
 
-1-on-1 & Group Chats: The system must support direct Agent-to-Human private messaging as well as Multi-Agent + Human group chats.
-Autonomous Delegation: When a human assigns a high-level task to the group, the agent collective must be able to autonomously decompose the task, negotiate roles, and delegate sub-tasks among themselves. Agents must also be capable of assigning tasks to other specialized agents.
-Human-in-the-Loop (HITL): Agents must be programmed to proactively pause and query humans for clarification or permission when they encounter ambiguity or before executing critical actions.
+文档类输出只使用 Markdown 和纯文本。程序员另外可以编写 `.py` 并在自己的沙箱里运行。
 
-2.2. Agent Evolution & Workspace Isolation
+## 运行
 
-Memory & Evolution: Each individual agent must possess its own memory mechanism (e.g., using a vector database or local JSON logs). Agents must learn from past task executions (successes/failures) to improve their performance on future tasks.
-Isolated Environments: Each agent must operate within its own private execution sandbox and maintain its own dedicated file system to prevent data leakage and ensure independent task execution.
+需要 Python 3.11 或更高版本。在项目根目录执行：
 
-2.3. Action Space (Tool Integration) Agents must be equipped with tools to interact with the external world. Required capabilities include:
+```text
+python -m src.main demo
+python -m src.main eval
+python -m src.main task "用 Markdown 写一段任务说明。"
+python -m src.main dm coder "写一个 Python 脚本并生成 RESULT.md"
+python -m src.main chat
+python -m unittest discover -s tests
+```
 
-Internet search and data retrieval.
-File system operations (Read, Generate, Update, Delete).
-Writing, testing, and executing code (e.g., Python scripts).
-Version control operations (Committing and pushing code to GitHub).
+`demo` 跑通一条群聊：研究员记录需求，程序员生成前 15 个斐波那契数的 Markdown 表，审阅者只读共享目录并给出结论。
 
-2.4. File Format Constraints Do NOT spend time implementing parsing or generation for complex proprietary formats (e.g., PDF, Word/DOCX, PowerPoint/PPT). All document-related tasks and outputs must strictly use plain-text formats, specifically Markdown (.md) and Plain Text (.txt).
+`eval` 读取 `eval/tasks.example.json`，把报告写到 `eval/results/report.md`。正式测试集发布后，换成那个文件即可，评分程序不用改。
 
-2.5. User Interface (UI) Keep the UI strictly minimal and functional. You may use a simple CLI (Command Line Interface), Telegram/Slack bot integrations, or a basic Gradio/Streamlit text interface. No extra credit will be given for elaborate frontend web design; your grade depends entirely on the AI engineering and orchestration backend.
+搜索默认返回离线说明，因此没有网络也能跑完。加上 `--online` 才会请求 DuckDuckGo。
 
-2.6. Standardized LLM Backbone To ensure fair performance benchmarking across all teams, the use of OpenAI/Anthropic APIs is prohibited. All systems must be built uniformly using the DeepSeek or HKGAI API. Dedicated API keys will be distributed to each team later in the semester.
+`task` 和 `chat` 会在目标含糊，或准备删除文件、执行 `git push` 时等待你的输入。`demo` 和 `eval` 使用任务文件里准备好的回答；没有回答时，危险操作会被拒绝。
 
-Evaluation & Metrics
-Your system's effectiveness will be quantitatively evaluated. The harness you build must automatically track and report the following core metrics during evaluation:
+## 接入课程模型
 
-Task Completion Rate: The percentage of sub-tasks and overarching goals successfully achieved without fatal crashes.
-Execution Time: The total time taken from task assignment to final output generation.
-The Final Evaluation Dataset: You will not know the final evaluation tasks in advance. A standardized, closed Test Set will be released to all groups exactly 3 weeks before the final submission deadline. Your system must be run against this dataset to generate your final performance metrics.
+复制 `.env.example` 为 `.env`。
 
-Deliverables and Submission Requirements
-Your final submission must include the following strictly enforced components:
+```text
+LLM_PROVIDER=deepseek
+DEEPSEEK_API_KEY=课程发放的密钥
+```
 
-Complete Codebase & Commit Verification
-You must submit the link to your GitHub repository.
-Commit History Requirement: The repository must demonstrate a continuous, collaborative development process. You must include screenshots of the Git commit history in your final documentation, clearly proving that every team member made significant code contributions throughout the half-semester. Bulk-uploading code at the end of the project will be heavily penalized or flagged for academic integrity review.
+使用 HKGAI 时设置 `LLM_PROVIDER=hkgai`，并填写 `HKGAI_API_KEY`、`HKGAI_BASE_URL` 和 `HKGAI_MODEL`。客户端按 OpenAI 风格的 `/chat/completions` 接口调用。密钥或地址缺失时，程序会留在 mock 模型并给出提示。
 
-System Architecture Document
-A comprehensive design document detailing your multi-agent routing logic, memory/evolution mechanisms, and sandbox implementations.
+## 目录
 
-Test Results & Performance Report
-A formal report analyzing your system's performance on the mid/final Test Set (released in the last 3/1 weeks), detailing your Task Completion Rates, Execution Times, and a discussion on failure modes and how your agents' memory evolved during testing. 
+| 路径 | 作用 |
+| --- | --- |
+| `src/orchestrator/` | 拆分目标、安排子任务，并在需要时等待人类 |
+| `src/agents/` | 四种角色共用一个工具循环，提示词和可用工具不同 |
+| `src/sandbox/` | 把每个智能体限制在 `workspaces/<agent>/` |
+| `src/memory/` | 任务结束后写入 `data/memory/<agent>.json`，下次按关键词取回 |
+| `src/tools/` | 搜索、文件、Python 执行和 Git |
+| `eval/` | 练习题和评分报告 |
+
+`workspaces/`、`data/chats/`、`data/memory/` 和 `eval/results/` 里的运行产物不进入版本库。

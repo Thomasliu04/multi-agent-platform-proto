@@ -1,0 +1,15 @@
+.env
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+workspaces/*
+!workspaces/.gitkeep
+data/chats/*
+!data/chats/.gitkeep
+data/memory/*
+!data/memory/.gitkeep
+eval/results/*
+!eval/results/.gitkeep
